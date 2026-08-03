@@ -1,4 +1,4 @@
-add_executable(nexus_client main.cpp)
+add_executable(nexus_client main.cpp client.cpp)
 
 # Ensure modern compiler flags are used
 target_compile_features(nexus_client PRIVATE cxx_std_17)
