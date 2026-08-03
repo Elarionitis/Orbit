@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Nexus VERSION 0.1.0 LANGUAGES CXX)
+project(Orbit VERSION 0.1.0 LANGUAGES CXX)
 
 # Set C++ standard to 17 and make it required
 set(CMAKE_CXX_STANDARD 17)
