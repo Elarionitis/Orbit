@@ -43,6 +43,11 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Nexus Server is running. Press Ctrl+C to stop gracefully." << std::endl;
     
+    // Create a thread for accepting clients since accept() is blocking
+    std::thread accept_thread([&server]() {
+        server.accept_clients();
+    });
+
     // Loop until we receive interrupt or termination signal
     while (g_signal_status == 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -50,6 +55,10 @@ int main(int argc, char* argv[]) {
 
     std::cout << "\nInterrupted. Shutting down server gracefully..." << std::endl;
     server.stop();
+
+    if (accept_thread.joinable()) {
+        accept_thread.join();
+    }
     std::cout << "Server shutdown successfully." << std::endl;
 
     return 0;

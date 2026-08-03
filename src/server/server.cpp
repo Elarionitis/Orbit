@@ -93,3 +93,40 @@ void Server::stop() {
     }
     m_running = false;
 }
+
+void Server::accept_clients() {
+    if (!m_running) return;
+
+    while (m_running) {
+        struct sockaddr_in client_addr{};
+        socklen_t client_len = sizeof(client_addr);
+
+        int client_fd = accept(m_server_fd, (struct sockaddr*)&client_addr, &client_len);
+
+        if (client_fd < 0) {
+            if (m_running) {
+                std::cerr << "Accept failed: " << strerror(errno) << std::endl;
+            }
+            continue;
+        }
+
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+        uint16_t client_port = ntohs(client_addr.sin_port);
+
+        std::cout << "Client connected: " << client_ip << ":" << client_port << std::endl;
+
+        // Simple echo/reply handling
+        char buffer[1024] = {0};
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_received > 0) {
+            std::cout << "Received: " << buffer << std::endl;
+            const char* reply = "Message received";
+            send(client_fd, reply, strlen(reply), 0);
+        }
+
+        // Cleanly close client socket after handling
+        close(client_fd);
+        std::cout << "Client disconnected: " << client_ip << ":" << client_port << std::endl;
+    }
+}

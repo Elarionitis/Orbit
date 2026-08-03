@@ -22,6 +22,9 @@ public:
     // Cleanup resources
     void stop();
 
+    // Accept and handle incoming connections
+    void accept_clients();
+
     // Query server state
     bool is_running() const { return m_running; }
     int get_socket_fd() const { return m_server_fd; }
