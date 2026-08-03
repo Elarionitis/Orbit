@@ -1,5 +1,5 @@
-#ifndef NEXUS_CLIENT_H
-#define NEXUS_CLIENT_H
+#ifndef ORBIT_CLIENT_H
+#define ORBIT_CLIENT_H
 
 #include <string>
 #include <cstdint>
@@ -22,4 +22,4 @@ private:
     bool m_connected;
 };
 
-#endif // NEXUS_CLIENT_H
+#endif // ORBIT_CLIENT_H

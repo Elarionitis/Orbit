@@ -1,11 +1,11 @@
 #include "client.h"
+#include "../common/utils.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <iostream>
 #include <cstring>
-#include <vector>
 
 Client::Client(const std::string& address, uint16_t port)
     : m_address(address), m_port(port), m_client_fd(-1), m_connected(false) {}
@@ -27,11 +27,13 @@ bool Client::connect_to_server() {
 
     if (inet_pton(AF_INET, m_address.c_str(), &serv_addr.sin_addr) <= 0) {
         std::cerr << "Invalid address" << std::endl;
+        disconnect();
         return false;
     }
 
     if (connect(m_client_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
         std::cerr << "Connection failed" << std::endl;
+        disconnect();
         return false;
     }
 
@@ -55,8 +57,14 @@ bool Client::send_message(const std::string& message) {
 
 std::string Client::receive_reply() {
     if (!m_connected) return "";
-    char buffer[1024] = {0};
+    char buffer[orbit::kBufferSize] = {};
     ssize_t bytes_received = recv(m_client_fd, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_received <= 0) return "";
+    if (bytes_received <= 0) {
+        if (bytes_received < 0) {
+            std::cerr << "Receive error: " << strerror(errno) << std::endl;
+        }
+        disconnect();
+        return "";
+    }
     return std::string(buffer, bytes_received);
 }

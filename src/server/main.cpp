@@ -1,4 +1,5 @@
 #include "server.h"
+#include "../common/utils.h"
 #include <iostream>
 #include <csignal>
 #include <thread>
@@ -14,7 +15,7 @@ void signal_handler(int signal) {
 }
 
 int main(int argc, char* argv[]) {
-    uint16_t port = 8080;
+    uint16_t port = orbit::kDefaultPort;
     
     // Parse configurable port
     if (argc > 1) {
@@ -37,11 +38,11 @@ int main(int argc, char* argv[]) {
 
     Server server(port);
     if (!server.start()) {
-        std::cerr << "Failed to bootstrap Nexus Server." << std::endl;
+        std::cerr << "Failed to bootstrap Orbit Server." << std::endl;
         return 1;
     }
 
-    std::cout << "Nexus Server is running. Press Ctrl+C to stop gracefully." << std::endl;
+    std::cout << "Orbit Server is running. Press Ctrl+C to stop gracefully." << std::endl;
     
     // Create a thread for accepting clients since accept() is blocking
     std::thread accept_thread([&server]() {
