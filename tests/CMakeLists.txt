@@ -13,6 +13,7 @@ include(GoogleTest)
 
 add_executable(orbit_unit_tests
     unit/byte_buffer_test.cpp
+    unit/client_text_test.cpp
     unit/config_test.cpp
     unit/connection_test.cpp
     unit/crc32c_test.cpp
@@ -23,13 +24,20 @@ add_executable(orbit_unit_tests
     unit/token_bucket_test.cpp
     unit/wal_test.cpp)
 target_include_directories(orbit_unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(orbit_unit_tests PRIVATE orbit_server_core GTest::gtest_main)
+target_link_libraries(orbit_unit_tests PRIVATE orbit_client_core orbit_server_core GTest::gtest_main)
 if(ORBIT_ENABLE_TLS)
     target_sources(orbit_unit_tests PRIVATE unit/tls_test.cpp)
 endif()
 gtest_discover_tests(orbit_unit_tests DISCOVERY_MODE PRE_TEST)
 
-add_executable(orbit_integration_tests integration/server_test.cpp)
+add_executable(orbit_integration_tests
+    integration/client_test.cpp
+    integration/crash_test.cpp
+    integration/server_test.cpp)
 target_include_directories(orbit_integration_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(orbit_integration_tests PRIVATE orbit_server_core GTest::gtest_main)
+target_compile_definitions(orbit_integration_tests PRIVATE
+    ORBIT_SERVER_BINARY="$<TARGET_FILE:orbit_server>")
+target_link_libraries(orbit_integration_tests PRIVATE
+    orbit_client_core orbit_server_core GTest::gtest_main)
+add_dependencies(orbit_integration_tests orbit_server)
 gtest_discover_tests(orbit_integration_tests DISCOVERY_MODE PRE_TEST PROPERTIES TIMEOUT 120)

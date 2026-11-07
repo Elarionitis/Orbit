@@ -10,6 +10,7 @@
 
 #include <array>
 #include <cerrno>
+#include <cstring>
 #include <format>
 #include <memory>
 #include <stdexcept>
@@ -113,24 +114,35 @@ UniqueFd listen_tcp(const std::string& host, std::uint16_t port, int backlog) {
     throw_errno(std::format("cannot listen on {}:{}", host, port));
 }
 
-UniqueFd connect_tcp(const std::string& host, std::uint16_t port) {
+std::vector<SocketAddress> resolve_tcp(const std::string& host, std::uint16_t port) {
     const AddrInfoPtr results = resolve(host, port, false);
-    int last_error = 0;
+    std::vector<SocketAddress> addresses;
     for (const addrinfo* info = results.get(); info != nullptr; info = info->ai_next) {
-        UniqueFd fd = open_socket(*info);
-        if (!fd.valid()) {
-            last_error = errno;
-            continue;
-        }
-        set_nonblocking(fd.get());
-        configure_stream_socket(fd.get());
-        if (::connect(fd.get(), info->ai_addr, info->ai_addrlen) == 0 || errno == EINPROGRESS) {
-            return fd;
-        }
-        last_error = errno;
+        SocketAddress address;
+        std::memcpy(&address.storage, info->ai_addr, info->ai_addrlen);
+        address.length = info->ai_addrlen;
+        addresses.push_back(address);
     }
-    errno = last_error;
-    throw_errno(std::format("cannot connect to {}:{}", host, port));
+    return addresses;
+}
+
+UniqueFd connect_tcp(const SocketAddress& address) {
+    UniqueFd fd(::socket(address.storage.ss_family, SOCK_STREAM, 0));
+    if (!fd.valid()) {
+        throw_errno("socket");
+    }
+    set_close_on_exec(fd.get());
+    set_nonblocking(fd.get());
+    configure_stream_socket(fd.get());
+    const auto* target = reinterpret_cast<const sockaddr*>(&address.storage);
+    if (::connect(fd.get(), target, address.length) != 0 && errno != EINPROGRESS) {
+        throw_errno("connect");
+    }
+    return fd;
+}
+
+UniqueFd connect_tcp(const std::string& host, std::uint16_t port) {
+    return connect_tcp(resolve_tcp(host, port).at(0));
 }
 
 int connect_result(int fd) {
