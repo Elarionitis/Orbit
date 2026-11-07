@@ -18,7 +18,9 @@
 namespace orbit::storage {
 
 enum class SyncPolicy {
-    None,      // Leave flushing to the OS. Survives a process crash, not power loss.
+    // None and Interval acknowledge a record once it is queued, before the writer
+    // thread has written it, so even a process crash can lose the queued tail.
+    None,      // Leave flushing to the OS.
     Interval,  // fsync on a timer. Bounds loss on power failure to the interval.
     Always,    // fsync before acknowledging. Nothing acknowledged can be lost.
 };
