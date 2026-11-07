@@ -11,3 +11,9 @@ add_library(orbit_net STATIC
     socket.cpp
     ${ORBIT_POLLER_SOURCE})
 target_link_libraries(orbit_net PUBLIC orbit_common)
+
+if(ORBIT_ENABLE_TLS)
+    target_sources(orbit_net PRIVATE tls.cpp)
+    target_compile_definitions(orbit_net PUBLIC ORBIT_HAS_TLS=1)
+    target_link_libraries(orbit_net PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+endif()
