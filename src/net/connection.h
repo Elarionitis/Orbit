@@ -33,9 +33,10 @@ using SharedBytes = std::shared_ptr<const std::vector<std::uint8_t>>;
 // count per recipient rather than one copy, and the queue is flushed with a
 // single vectored write once per loop iteration.
 //
-// close() tears the socket down at once but reports through on_close only from
-// deferred work. By then the event batch that may still reference this object
-// has finished, so on_close is the one safe place to destroy the Connection.
+// close() tears the socket down at once but reports through on_close from deferred
+// work, after the event batch that may still reference this object has finished.
+// An owner may destroy the Connection from on_close, or at any other time on the
+// loop thread: deferred work holds a liveness token rather than trusting `this`.
 class Connection final : public IoHandler {
 public:
     struct Handlers {
@@ -89,6 +90,17 @@ private:
     void update_interest();
     void begin_linger();
 
+    // Queues `work` for the end of this loop iteration, dropping it if this object
+    // has been destroyed by then.
+    template <typename F>
+    void defer_if_alive(F&& work) {
+        m_loop.defer([alive = std::weak_ptr<void>(m_alive), work = std::forward<F>(work)] {
+            if (!alive.expired()) {
+                work();
+            }
+        });
+    }
+
     EventLoop& m_loop;
     UniqueFd m_fd;
     Options m_options;
@@ -105,6 +117,8 @@ private:
     ByteBuffer m_input;
     std::deque<Chunk> m_output;
     std::size_t m_queued_bytes = 0;
+
+    std::shared_ptr<void> m_alive = std::make_shared<char>();
 };
 
 }  // namespace orbit::net

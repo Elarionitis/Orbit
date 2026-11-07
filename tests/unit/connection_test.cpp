@@ -223,6 +223,33 @@ TEST_F(ConnectionFixture, CloseInsideDataHandlerIsSafe) {
     EXPECT_EQ(wait_closed(), CloseReason::Local);
 }
 
+// Regression: deferred work used to capture `this`, so destroying a Connection in
+// the iteration it was closed or written to was a use-after-free.
+TEST_F(ConnectionFixture, CanBeDestroyedInTheSameIterationItWasClosed) {
+    open();
+    on_loop([&] {
+        connection->close();
+        connection.reset();
+    });
+}
+
+TEST_F(ConnectionFixture, CanBeDestroyedWithAFlushPending) {
+    open();
+    on_loop([&] {
+        connection->send(bytes_from("never flushed"));
+        connection.reset();
+    });
+}
+
+TEST_F(ConnectionFixture, CanBeDestroyedWhileDraining) {
+    open();
+    on_loop([&] {
+        connection->send(bytes_from("bye"));
+        connection->close_after_flush();
+    });
+    on_loop([&] { connection.reset(); });
+}
+
 TEST_F(ConnectionFixture, WritingToADeadPeerClosesInsteadOfRaisingSigpipe) {
     open();
     peer.reset();

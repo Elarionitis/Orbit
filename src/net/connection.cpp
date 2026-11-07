@@ -170,7 +170,7 @@ void Connection::enqueue(SharedBytes bytes) {
 void Connection::schedule_flush() {
     if (!m_flush_scheduled) {
         m_flush_scheduled = true;
-        m_loop.defer([this] {
+        defer_if_alive([this] {
             m_flush_scheduled = false;
             flush();
         });
@@ -281,7 +281,7 @@ void Connection::close(CloseReason reason) {
     m_queued_bytes = 0;
 
     const CloseReason reported = graceful ? m_close_reason : reason;
-    m_loop.defer([this, reported] {
+    defer_if_alive([this, reported] {
         // Moved out first: the handler is allowed to destroy this object, and a
         // std::function must not be destroyed while it is running.
         const auto on_close = std::move(m_handlers.on_close);
