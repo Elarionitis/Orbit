@@ -45,8 +45,8 @@ public:
     void send_raw(const std::vector<std::uint8_t>& bytes) {
         std::size_t offset = 0;
         while (offset < bytes.size()) {
-            const ssize_t sent = ::send(m_fd.get(), bytes.data() + offset, bytes.size() - offset,
-                                        net::send_flags());
+            const ssize_t sent =
+                ::send(m_fd.get(), bytes.data() + offset, bytes.size() - offset, net::send_flags());
             if (sent > 0) {
                 offset += static_cast<std::size_t>(sent);
             } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
@@ -62,8 +62,7 @@ public:
     std::optional<protocol::AnyMessage> receive(int timeout_ms = 5000) {
         const std::uint64_t deadline = monotonic_ms() + static_cast<std::uint64_t>(timeout_ms);
         for (;;) {
-            const auto frame =
-                protocol::extract_frame(m_input.readable(), 16 * 1024 * 1024);
+            const auto frame = protocol::extract_frame(m_input.readable(), 16 * 1024 * 1024);
             if (frame.status == protocol::ExtractStatus::Complete) {
                 auto message = protocol::decode(frame.body);
                 m_input.consume(frame.consumed);

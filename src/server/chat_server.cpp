@@ -18,8 +18,7 @@
 
 namespace orbit::server {
 
-ChatServer::ChatServer(ServerConfig config)
-    : m_config(std::move(config)), m_metrics(m_registry) {
+ChatServer::ChatServer(ServerConfig config) : m_config(std::move(config)), m_metrics(m_registry) {
     if (m_config.threads == 0) {
         m_config.threads = std::max(1U, std::thread::hardware_concurrency());
     }
@@ -41,14 +40,13 @@ void ChatServer::start() {
     }
 #endif
 
-    m_context = std::make_unique<ServerContext>(
-        ServerContext{m_config, m_metrics, m_nicks, m_directory, nullptr, m_tls.get(), m_shards,
-                      m_next_room_id});
+    m_context = std::make_unique<ServerContext>(ServerContext{
+        m_config, m_metrics, m_nicks, m_directory, nullptr, m_tls.get(), m_shards, m_next_room_id});
     for (std::size_t i = 0; i < m_config.threads; ++i) {
         m_shards.push_back(std::make_unique<Shard>(i, *m_context));
-        m_queue_depth_gauges.push_back(&m_registry.gauge(
-            "orbit_shard_queue_depth", "Tasks waiting on each shard.",
-            std::format("shard=\"{}\"", i)));
+        m_queue_depth_gauges.push_back(&m_registry.gauge("orbit_shard_queue_depth",
+                                                         "Tasks waiting on each shard.",
+                                                         std::format("shard=\"{}\"", i)));
     }
 
     if (!m_config.data_dir.empty()) {
@@ -57,14 +55,14 @@ void ChatServer::start() {
 
     // Everything binds on shard 0; if a bind throws, no thread has started yet.
     net::EventLoop& first_loop = m_shards[0]->loop();
-    m_listener = std::make_unique<net::Listener>(
-        first_loop, m_config.host, m_config.port, 4096,
-        [this](net::UniqueFd fd) { on_accept(std::move(fd)); });
+    m_listener =
+        std::make_unique<net::Listener>(first_loop, m_config.host, m_config.port, 4096,
+                                        [this](net::UniqueFd fd) { on_accept(std::move(fd)); });
     m_port = m_listener->port();
     if (m_config.metrics_port) {
-        m_admin = std::make_unique<AdminHttp>(first_loop, m_config.metrics_host,
-                                              *m_config.metrics_port,
-                                              [this] { return render_metrics(); });
+        m_admin =
+            std::make_unique<AdminHttp>(first_loop, m_config.metrics_host, *m_config.metrics_port,
+                                        [this] { return render_metrics(); });
         m_metrics_port = m_admin->port();
     }
 
@@ -93,9 +91,8 @@ void ChatServer::recover() {
         owner(room).restore_head(room, head);
     }
     if (m_recovery.segments > 0) {
-        log::info("recovered {} messages in {} rooms from {} segments in {} ms",
-                  m_recovery.records, m_recovery.room_heads.size(), m_recovery.segments,
-                  monotonic_ms() - start);
+        log::info("recovered {} messages in {} rooms from {} segments in {} ms", m_recovery.records,
+                  m_recovery.room_heads.size(), m_recovery.segments, monotonic_ms() - start);
     }
 
     storage::WalOptions options;

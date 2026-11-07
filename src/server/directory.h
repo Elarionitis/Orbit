@@ -71,9 +71,8 @@ public:
 private:
     static std::string fold(std::string_view nick) {
         std::string folded(nick);
-        std::transform(folded.begin(), folded.end(), folded.begin(), [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        });
+        std::transform(folded.begin(), folded.end(), folded.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return folded;
     }
 

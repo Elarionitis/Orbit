@@ -6,7 +6,8 @@ using namespace orbit::client;
 
 TEST(Sanitize, LeavesPrintableTextAlone) {
     EXPECT_EQ(sanitize_for_terminal("hello, world"), "hello, world");
-    EXPECT_EQ(sanitize_for_terminal("caf\xC3\xA9 \xF0\x9F\x9A\x80"), "caf\xC3\xA9 \xF0\x9F\x9A\x80");
+    EXPECT_EQ(sanitize_for_terminal("caf\xC3\xA9 \xF0\x9F\x9A\x80"),
+              "caf\xC3\xA9 \xF0\x9F\x9A\x80");
 }
 
 TEST(Sanitize, RemovesTerminalControlSequences) {
@@ -16,7 +17,9 @@ TEST(Sanitize, RemovesTerminalControlSequences) {
 }
 
 TEST(Sanitize, RemovesEightBitControlsEncodedAsUtf8) {
-    EXPECT_EQ(sanitize_for_terminal("x\xC2\x9B""31my"), "x31my");  // U+009B is CSI.
+    EXPECT_EQ(sanitize_for_terminal("x\xC2\x9B"
+                                    "31my"),
+              "x31my");                                            // U+009B is CSI.
     EXPECT_EQ(sanitize_for_terminal("\xC2\xA0ok"), "\xC2\xA0ok");  // U+00A0 is not a control.
 }
 

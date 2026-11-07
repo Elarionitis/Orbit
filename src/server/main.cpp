@@ -60,8 +60,8 @@ int main(int argc, char* argv[]) {
         server::ChatServer server(config);
         server.start();
 
-        log::info("orbit {} listening on {}:{} (threads={}, tls={}, persistence={})",
-                  ORBIT_VERSION, config.host, server.port(),
+        log::info("orbit {} listening on {}:{} (threads={}, tls={}, persistence={})", ORBIT_VERSION,
+                  config.host, server.port(),
                   config.threads == 0 ? std::thread::hardware_concurrency() : config.threads,
                   config.tls_cert.empty() ? "off" : "on",
                   config.data_dir.empty() ? "off" : storage::to_string(config.sync_policy));

@@ -102,8 +102,8 @@ void Session::dispatch(AnyMessage&& message) {
             constexpr bool is_hello = std::is_same_v<T, Hello>;
             constexpr bool is_client_message =
                 is_hello || std::is_same_v<T, Join> || std::is_same_v<T, Leave> ||
-                std::is_same_v<T, Publish> || std::is_same_v<T, Direct> ||
-                std::is_same_v<T, Who> || std::is_same_v<T, ListRooms> || std::is_same_v<T, Ping>;
+                std::is_same_v<T, Publish> || std::is_same_v<T, Direct> || std::is_same_v<T, Who> ||
+                std::is_same_v<T, ListRooms> || std::is_same_v<T, Ping>;
 
             if constexpr (!is_client_message) {
                 protocol_violation("server message sent by a client");
@@ -193,8 +193,7 @@ bool Session::validate_body(const std::string& body, std::uint64_t correlation) 
 }
 
 void Session::handle(Publish&& publish) {
-    if (!admit_message(publish.correlation) ||
-        !validate_body(publish.body, publish.correlation)) {
+    if (!admit_message(publish.correlation) || !validate_body(publish.body, publish.correlation)) {
         return;
     }
     m_shard.publish(PublishRequest{m_id, m_nick, publish.correlation, std::move(publish.room),
@@ -211,8 +210,7 @@ void Session::handle(Direct&& direct) {
         return;
     }
     const std::uint64_t now = wall_clock_ms();
-    m_shard.send_to(*target,
-                    make_frame(DirectMessage{m_nick, now, std::move(direct.body)}));
+    m_shard.send_to(*target, make_frame(DirectMessage{m_nick, now, std::move(direct.body)}));
     send(make_frame(Ack{direct.correlation, 0, now}));
     m_context.metrics.direct_messages.add();
 }
@@ -255,8 +253,8 @@ void Session::on_idle_check() {
                                     : m_context.config.idle_timeout_ms;
     const std::uint64_t idle = m_shard.loop().now_ms() - m_last_activity_ms;
     if (idle >= limit) {
-        terminate(ErrorCode::TimedOut, m_state == State::AwaitingHello ? "no Hello received"
-                                                                       : "idle timeout");
+        terminate(ErrorCode::TimedOut,
+                  m_state == State::AwaitingHello ? "no Hello received" : "idle timeout");
         return;
     }
     schedule_idle_check(limit - idle);

@@ -98,14 +98,10 @@ using Setter = std::function<void(ServerConfig&, std::string_view flag, const st
 const std::map<std::string_view, Setter>& setters() {
     static const std::map<std::string_view, Setter> table = {
         {"--host", [](auto& c, auto, const auto& v) { c.host = v; }},
-        {"--port",
-         [](auto& c, auto f, const auto& v) {
-             c.port = parse_number<std::uint16_t>(f, v, 0, 65535);
-         }},
-        {"--threads",
-         [](auto& c, auto f, const auto& v) {
-             c.threads = parse_number<std::size_t>(f, v, 1, 1024);
-         }},
+        {"--port", [](auto& c, auto f,
+                      const auto& v) { c.port = parse_number<std::uint16_t>(f, v, 0, 65535); }},
+        {"--threads", [](auto& c, auto f,
+                         const auto& v) { c.threads = parse_number<std::size_t>(f, v, 1, 1024); }},
         {"--metrics-port",
          [](auto& c, auto f, const auto& v) {
              c.metrics_port = parse_number<std::uint16_t>(f, v, 0, 65535);
@@ -144,7 +140,8 @@ const std::map<std::string_view, Setter>& setters() {
          [](auto& c, auto f, const auto& v) { c.max_body_size = parse_positive(f, v); }},
         {"--max-queued-bytes",
          [](auto& c, auto f, const auto& v) { c.max_queued_bytes = parse_positive(f, v); }},
-        {"--history", [](auto& c, auto f, const auto& v) { c.history_messages = parse_size(f, v); }},
+        {"--history",
+         [](auto& c, auto f, const auto& v) { c.history_messages = parse_size(f, v); }},
         {"--rate",
          [](auto& c, auto f, const auto& v) {
              c.rate_per_second = static_cast<double>(parse_size(f, v));

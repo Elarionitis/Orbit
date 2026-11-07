@@ -210,8 +210,8 @@ void ChatClient::heartbeat() {
     if (!m_connection) {
         return;
     }
-    const auto limit = static_cast<std::uint64_t>(static_cast<double>(m_heartbeat_ms) *
-                                                  kMissedHeartbeatLimit);
+    const auto limit =
+        static_cast<std::uint64_t>(static_cast<double>(m_heartbeat_ms) * kMissedHeartbeatLimit);
     if (m_loop.now_ms() - m_last_received_ms > limit) {
         m_close_detail = "server stopped responding";
         m_connection->close();
@@ -300,8 +300,8 @@ void ChatClient::schedule_retry(const std::string& detail) {
     std::uniform_int_distribution<std::uint64_t> pick(m_options.min_backoff_ms, ceiling);
     const std::uint64_t delay = pick(m_random);
 
-    set_state(State::Backoff, std::format("{}; retrying in {:.1f}s", detail,
-                                          static_cast<double>(delay) / 1000.0));
+    set_state(State::Backoff,
+              std::format("{}; retrying in {:.1f}s", detail, static_cast<double>(delay) / 1000.0));
     m_retry_timer = m_loop.run_after(delay, [this] {
         m_retry_timer = 0;
         connect();

@@ -109,8 +109,8 @@ TEST(Codec, SurvivesRandomGarbage) {
         if (const auto decoded = decode(body)) {
             // Anything accepted must re-encode to exactly the same bytes.
             const auto frame = encode(*decoded);
-            EXPECT_TRUE(std::equal(body.begin(), body.end(), body_of(frame).begin(),
-                                   body_of(frame).end()));
+            EXPECT_TRUE(
+                std::equal(body.begin(), body.end(), body_of(frame).begin(), body_of(frame).end()));
         }
     }
 }
@@ -118,8 +118,7 @@ TEST(Codec, SurvivesRandomGarbage) {
 TEST(ExtractFrame, NeedsMoreForEveryPartialPrefix) {
     const auto frame = encode(Publish{1, "room", "some body text"});
     for (std::size_t length = 0; length < frame.size(); ++length) {
-        const auto result =
-            extract_frame(std::span(frame).first(length), kDefaultMaxFrameSize);
+        const auto result = extract_frame(std::span(frame).first(length), kDefaultMaxFrameSize);
         EXPECT_EQ(result.status, ExtractStatus::NeedMore) << length;
     }
     EXPECT_EQ(extract_frame(frame, kDefaultMaxFrameSize).status, ExtractStatus::Complete);

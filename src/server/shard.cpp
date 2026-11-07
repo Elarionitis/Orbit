@@ -50,8 +50,8 @@ void Shard::adopt(net::UniqueFd fd) {
         }
 #endif
         const SessionId id = make_session_id(m_index, m_next_session++);
-        auto session = std::make_unique<Session>(*this, m_context, id, std::move(*holder),
-                                                 std::move(channel));
+        auto session =
+            std::make_unique<Session>(*this, m_context, id, std::move(*holder), std::move(channel));
         Session* raw = session.get();
         m_sessions.emplace(id, std::move(session));
         m_context.metrics.connections_active.add();
@@ -128,9 +128,8 @@ void Shard::publish(PublishRequest&& request) {
 
 void Shard::send_to(SessionId session, Frame frame) {
     Shard& target = shard_of(session);
-    run_on(target, [&target, session, frame = std::move(frame)] {
-        target.deliver_one(session, frame);
-    });
+    run_on(target,
+           [&target, session, frame = std::move(frame)] { target.deliver_one(session, frame); });
 }
 
 // ---- Room role: runs on the owning shard, which is the room's only writer. ----
@@ -169,8 +168,8 @@ void Shard::on_join(SessionId session, const std::string& nick, const std::strin
                     std::uint64_t since_seq) {
     Shard& home = shard_of(session);
     if (find_room(name) == nullptr && m_context.directory.size() >= m_context.config.max_rooms) {
-        run_on(home, [&home, session, error = make_frame(Error{0, ErrorCode::Overloaded,
-                                                               "room limit reached"})] {
+        run_on(home, [&home, session,
+                      error = make_frame(Error{0, ErrorCode::Overloaded, "room limit reached"})] {
             home.on_join_refused(session, error);
         });
         return;
@@ -186,10 +185,9 @@ void Shard::on_join(SessionId session, const std::string& nick, const std::strin
     // The subscription, the replay and everything fanned out after this line reach
     // the session's shard in order through one queue. That FIFO hop is what makes
     // the hand-over from history to live stream gap-free.
-    run_on(home, [&home, session, id = room.id(), name, joined = std::move(joined),
-                  history = std::move(history)] {
-        home.on_joined(session, id, name, joined, history);
-    });
+    run_on(home,
+           [&home, session, id = room.id(), name, joined = std::move(joined),
+            history = std::move(history)] { home.on_joined(session, id, name, joined, history); });
 
     if (newly_joined) {
         m_context.directory.set_member_count(name, member_count);
@@ -222,9 +220,8 @@ void Shard::on_leave(SessionId session, const std::string& name) {
 
 void Shard::on_who(SessionId session, const std::string& name) {
     Room* room = find_room(name);
-    Frame reply = room != nullptr
-                      ? make_frame(WhoReply{name, room->nicks()})
-                      : make_frame(Error{0, ErrorCode::NotInRoom, name});
+    Frame reply = room != nullptr ? make_frame(WhoReply{name, room->nicks()})
+                                  : make_frame(Error{0, ErrorCode::NotInRoom, name});
     send_to(session, std::move(reply));
 }
 

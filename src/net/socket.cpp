@@ -39,7 +39,8 @@ AddrInfoPtr resolve(const std::string& host, std::uint16_t port, bool passive) {
     const int status =
         getaddrinfo(host.empty() ? nullptr : host.c_str(), service.c_str(), &hints, &results);
     if (status != 0) {
-        throw std::runtime_error(std::format("cannot resolve '{}': {}", host, gai_strerror(status)));
+        throw std::runtime_error(
+            std::format("cannot resolve '{}': {}", host, gai_strerror(status)));
     }
     return AddrInfoPtr(results);
 }

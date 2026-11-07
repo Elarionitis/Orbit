@@ -23,7 +23,9 @@ constexpr int kMaxPollMs = 60'000;
 }  // namespace
 
 EventLoop::EventLoop()
-    : m_timers(kTimerTickMs, kTimerSlots, monotonic_ms()), m_waker(*this), m_now_ms(monotonic_ms()) {
+    : m_timers(kTimerTickMs, kTimerSlots, monotonic_ms()),
+      m_waker(*this),
+      m_now_ms(monotonic_ms()) {
 #ifdef __linux__
     const int fd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (fd < 0) {
@@ -56,7 +58,8 @@ void EventLoop::run() {
         m_now_ms = monotonic_ms();
         for (int i = 0; i < count; ++i) {
             const PollEvent& event = m_events[static_cast<std::size_t>(i)];
-            static_cast<IoHandler*>(event.user)->on_io(event.readable, event.writable, event.failed);
+            static_cast<IoHandler*>(event.user)
+                ->on_io(event.readable, event.writable, event.failed);
         }
         run_posted_tasks();
         m_timers.advance(m_now_ms);

@@ -196,9 +196,9 @@ struct Pong {
     bool operator==(const Pong&) const = default;
 };
 
-using AnyMessage = std::variant<Hello, Join, Leave, Publish, Direct, Who, ListRooms, Ping, Welcome,
-                                Error, Joined, Left, Message, Presence, DirectMessage, Ack,
-                                WhoReply, RoomList, Pong>;
+using AnyMessage =
+    std::variant<Hello, Join, Leave, Publish, Direct, Who, ListRooms, Ping, Welcome, Error, Joined,
+                 Left, Message, Presence, DirectMessage, Ack, WhoReply, RoomList, Pong>;
 
 // An immutable encoded frame. Fan-out hands the same frame to every recipient,
 // so a message is serialised once no matter how many members a room has.
@@ -215,10 +215,10 @@ inline Frame make_frame(const AnyMessage& message) {
 std::optional<AnyMessage> decode(std::span<const std::uint8_t> frame_body);
 
 enum class ExtractStatus {
-    Complete,    // A full frame is available.
-    NeedMore,    // Wait for more bytes.
-    Oversized,   // Declared length exceeds the limit; the stream cannot be trusted.
-    Empty,       // Declared length is zero; there is no type byte.
+    Complete,   // A full frame is available.
+    NeedMore,   // Wait for more bytes.
+    Oversized,  // Declared length exceeds the limit; the stream cannot be trusted.
+    Empty,      // Declared length is zero; there is no type byte.
 };
 
 struct Extracted {

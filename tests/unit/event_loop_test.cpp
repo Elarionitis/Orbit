@@ -127,9 +127,8 @@ TEST(EventLoop, TimerFiresAfterDelay) {
     LoopThread thread;
     std::promise<std::uint64_t> fired;
     const auto start = orbit::monotonic_ms();
-    thread.loop.post([&] {
-        thread.loop.run_after(50, [&] { fired.set_value(orbit::monotonic_ms()); });
-    });
+    thread.loop.post(
+        [&] { thread.loop.run_after(50, [&] { fired.set_value(orbit::monotonic_ms()); }); });
     EXPECT_GE(fired.get_future().get() - start, 40U);
 }
 

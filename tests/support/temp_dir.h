@@ -12,9 +12,9 @@ class TempDir {
 public:
     TempDir() {
         static std::atomic<int> counter{0};
-        m_path = std::filesystem::temp_directory_path() /
-                 ("orbit-test-" + std::to_string(::getpid()) + "-" +
-                  std::to_string(counter.fetch_add(1)));
+        m_path =
+            std::filesystem::temp_directory_path() / ("orbit-test-" + std::to_string(::getpid()) +
+                                                      "-" + std::to_string(counter.fetch_add(1)));
         std::filesystem::create_directories(m_path);
     }
     ~TempDir() {

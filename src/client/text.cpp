@@ -35,7 +35,7 @@ std::string sanitize_for_terminal(std::string_view text) {
 
 int nick_colour(std::string_view nick) {
     // Mid-brightness colours that stay readable on light and dark backgrounds.
-    static constexpr std::array<int, 12> kPalette = {39, 41,  74,  79,  99,  105,
+    static constexpr std::array<int, 12> kPalette = {39,  41,  74,  79,  99,  105,
                                                      135, 141, 166, 172, 178, 203};
     std::uint32_t hash = 2166136261U;
     for (const char c : nick) {

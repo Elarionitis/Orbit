@@ -55,8 +55,11 @@ protected:
 
     ChannelPair connect(const std::shared_ptr<TlsContext>& client_context,
                         const std::string& hostname) {
-        ChannelPair pair{client_context->create_channel(hostname), server_context->create_channel(),
-                         {}, {}, false};
+        ChannelPair pair{client_context->create_channel(hostname),
+                         server_context->create_channel(),
+                         {},
+                         {},
+                         false};
         EXPECT_TRUE(pair.server->start());
         EXPECT_TRUE(pair.client->start());
         pair.pump();
@@ -90,8 +93,11 @@ TEST_F(TlsTest, CiphertextDoesNotContainThePlaintext) {
 
 TEST_F(TlsTest, QueuesDataSentBeforeTheHandshakeCompletes) {
     auto client_context = TlsContext::client(cert.cert_path.string(), true);
-    ChannelPair pair{client_context->create_channel("localhost"), server_context->create_channel(),
-                     {}, {}, false};
+    ChannelPair pair{client_context->create_channel("localhost"),
+                     server_context->create_channel(),
+                     {},
+                     {},
+                     false};
     ASSERT_TRUE(pair.client->start());
     ASSERT_TRUE(pair.client->send(bytes_of("early")));
     pair.pump();

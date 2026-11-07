@@ -172,9 +172,12 @@ std::size_t scan_segment(std::span<const std::uint8_t> bytes, RecoveryReport& re
 
 const char* to_string(SyncPolicy policy) {
     switch (policy) {
-        case SyncPolicy::None: return "none";
-        case SyncPolicy::Interval: return "interval";
-        case SyncPolicy::Always: return "always";
+        case SyncPolicy::None:
+            return "none";
+        case SyncPolicy::Interval:
+            return "interval";
+        case SyncPolicy::Always:
+            return "always";
     }
     return "unknown";
 }
@@ -216,9 +219,9 @@ Wal::Wal(WalOptions options, std::map<std::string, std::uint64_t> heads,
         m_records_metric = &registry->counter("orbit_wal_records_total", "Records written.");
         m_bytes_metric = &registry->counter("orbit_wal_bytes_total", "Bytes written.");
         m_syncs_metric = &registry->counter("orbit_wal_fsyncs_total", "fsync calls issued.");
-        m_batch_metric = &registry->histogram("orbit_wal_batch_records",
-                                              "Records per group commit.",
-                                              {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024});
+        m_batch_metric =
+            &registry->histogram("orbit_wal_batch_records", "Records per group commit.",
+                                 {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024});
         m_sync_latency_metric = &registry->histogram(
             "orbit_wal_fsync_seconds", "fsync latency.",
             {0.0001, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.5});

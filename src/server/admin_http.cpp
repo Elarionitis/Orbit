@@ -40,8 +40,8 @@ void AdminHttp::on_accept(net::UniqueFd fd) {
 
     net::Connection::Options options;
     options.max_queued_bytes = 16 * 1024 * 1024;
-    auto connection = std::make_unique<net::Connection>(m_loop, std::move(fd), options,
-                                                        std::move(handlers));
+    auto connection =
+        std::make_unique<net::Connection>(m_loop, std::move(fd), options, std::move(handlers));
     net::Connection* raw = connection.get();
     m_connections.emplace(id, std::move(connection));
     raw->start();

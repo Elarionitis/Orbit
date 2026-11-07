@@ -79,8 +79,8 @@ private:
         }
         T value{};
         for (std::size_t i = 0; i < sizeof(T); ++i) {
-            value = static_cast<T>(static_cast<std::uint64_t>(value) << 8 |
-                                   m_input[m_position + i]);
+            value =
+                static_cast<T>(static_cast<std::uint64_t>(value) << 8 | m_input[m_position + i]);
         }
         m_position += sizeof(T);
         return value;

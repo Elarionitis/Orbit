@@ -64,7 +64,8 @@ TEST(Config, HelpAndVersionExitCleanly) {
 
 TEST(Config, RejectsContradictorySettings) {
     EXPECT_FALSE(parse({"--tls-cert", "a.pem"}).config.has_value());
-    EXPECT_FALSE(parse({"--max-frame-bytes", "1000", "--max-body-bytes", "900"}).config.has_value());
+    EXPECT_FALSE(
+        parse({"--max-frame-bytes", "1000", "--max-body-bytes", "900"}).config.has_value());
     EXPECT_FALSE(parse({"--heartbeat-ms", "5000", "--idle-timeout-ms", "5000"}).config.has_value());
 }
 

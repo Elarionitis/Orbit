@@ -104,25 +104,44 @@ void write_body(Writer& out, const Pong& m) {
 
 template <typename T>
 constexpr MessageType type_of() {
-    if constexpr (std::is_same_v<T, Hello>) return MessageType::Hello;
-    if constexpr (std::is_same_v<T, Join>) return MessageType::Join;
-    if constexpr (std::is_same_v<T, Leave>) return MessageType::Leave;
-    if constexpr (std::is_same_v<T, Publish>) return MessageType::Publish;
-    if constexpr (std::is_same_v<T, Direct>) return MessageType::Direct;
-    if constexpr (std::is_same_v<T, Who>) return MessageType::Who;
-    if constexpr (std::is_same_v<T, ListRooms>) return MessageType::ListRooms;
-    if constexpr (std::is_same_v<T, Ping>) return MessageType::Ping;
-    if constexpr (std::is_same_v<T, Welcome>) return MessageType::Welcome;
-    if constexpr (std::is_same_v<T, Error>) return MessageType::Error;
-    if constexpr (std::is_same_v<T, Joined>) return MessageType::Joined;
-    if constexpr (std::is_same_v<T, Left>) return MessageType::Left;
-    if constexpr (std::is_same_v<T, Message>) return MessageType::Message;
-    if constexpr (std::is_same_v<T, Presence>) return MessageType::Presence;
-    if constexpr (std::is_same_v<T, DirectMessage>) return MessageType::DirectMessage;
-    if constexpr (std::is_same_v<T, Ack>) return MessageType::Ack;
-    if constexpr (std::is_same_v<T, WhoReply>) return MessageType::WhoReply;
-    if constexpr (std::is_same_v<T, RoomList>) return MessageType::RoomList;
-    if constexpr (std::is_same_v<T, Pong>) return MessageType::Pong;
+    if constexpr (std::is_same_v<T, Hello>)
+        return MessageType::Hello;
+    if constexpr (std::is_same_v<T, Join>)
+        return MessageType::Join;
+    if constexpr (std::is_same_v<T, Leave>)
+        return MessageType::Leave;
+    if constexpr (std::is_same_v<T, Publish>)
+        return MessageType::Publish;
+    if constexpr (std::is_same_v<T, Direct>)
+        return MessageType::Direct;
+    if constexpr (std::is_same_v<T, Who>)
+        return MessageType::Who;
+    if constexpr (std::is_same_v<T, ListRooms>)
+        return MessageType::ListRooms;
+    if constexpr (std::is_same_v<T, Ping>)
+        return MessageType::Ping;
+    if constexpr (std::is_same_v<T, Welcome>)
+        return MessageType::Welcome;
+    if constexpr (std::is_same_v<T, Error>)
+        return MessageType::Error;
+    if constexpr (std::is_same_v<T, Joined>)
+        return MessageType::Joined;
+    if constexpr (std::is_same_v<T, Left>)
+        return MessageType::Left;
+    if constexpr (std::is_same_v<T, Message>)
+        return MessageType::Message;
+    if constexpr (std::is_same_v<T, Presence>)
+        return MessageType::Presence;
+    if constexpr (std::is_same_v<T, DirectMessage>)
+        return MessageType::DirectMessage;
+    if constexpr (std::is_same_v<T, Ack>)
+        return MessageType::Ack;
+    if constexpr (std::is_same_v<T, WhoReply>)
+        return MessageType::WhoReply;
+    if constexpr (std::is_same_v<T, RoomList>)
+        return MessageType::RoomList;
+    if constexpr (std::is_same_v<T, Pong>)
+        return MessageType::Pong;
 }
 
 AnyMessage read_message(MessageType type, Reader& in, bool& known) {
@@ -290,10 +309,9 @@ Extracted extract_frame(std::span<const std::uint8_t> input, std::size_t max_fra
     if (input.size() < kLengthPrefixSize) {
         return {};
     }
-    const std::size_t length = static_cast<std::size_t>(input[0]) << 24 |
-                               static_cast<std::size_t>(input[1]) << 16 |
-                               static_cast<std::size_t>(input[2]) << 8 |
-                               static_cast<std::size_t>(input[3]);
+    const std::size_t length =
+        static_cast<std::size_t>(input[0]) << 24 | static_cast<std::size_t>(input[1]) << 16 |
+        static_cast<std::size_t>(input[2]) << 8 | static_cast<std::size_t>(input[3]);
     if (length == 0) {
         return {ExtractStatus::Empty, {}, 0};
     }
@@ -334,12 +352,16 @@ bool is_valid_utf8(std::string_view text) {
             extra = 1;
         } else if (lead >= 0xE0 && lead <= 0xEF) {
             extra = 2;
-            if (lead == 0xE0) low = 0xA0;   // Overlong.
-            if (lead == 0xED) high = 0x9F;  // Surrogates.
+            if (lead == 0xE0)
+                low = 0xA0;  // Overlong.
+            if (lead == 0xED)
+                high = 0x9F;  // Surrogates.
         } else if (lead >= 0xF0 && lead <= 0xF4) {
             extra = 3;
-            if (lead == 0xF0) low = 0x90;   // Overlong.
-            if (lead == 0xF4) high = 0x8F;  // Past U+10FFFF.
+            if (lead == 0xF0)
+                low = 0x90;  // Overlong.
+            if (lead == 0xF4)
+                high = 0x8F;  // Past U+10FFFF.
         } else {
             return false;
         }
@@ -361,20 +383,34 @@ bool is_valid_utf8(std::string_view text) {
 
 std::string_view error_name(ErrorCode code) {
     switch (code) {
-        case ErrorCode::ProtocolViolation: return "protocol violation";
-        case ErrorCode::UnsupportedVersion: return "unsupported protocol version";
-        case ErrorCode::AuthenticationFailed: return "authentication failed";
-        case ErrorCode::NicknameTaken: return "nickname already in use";
-        case ErrorCode::InvalidName: return "invalid name";
-        case ErrorCode::InvalidMessage: return "invalid message";
-        case ErrorCode::NotInRoom: return "not in room";
-        case ErrorCode::UnknownUser: return "unknown user";
-        case ErrorCode::RateLimited: return "rate limited";
-        case ErrorCode::Overloaded: return "server overloaded";
-        case ErrorCode::ServerFull: return "server full";
-        case ErrorCode::ServerShutdown: return "server shutting down";
-        case ErrorCode::StorageFailure: return "storage failure";
-        case ErrorCode::TimedOut: return "timed out";
+        case ErrorCode::ProtocolViolation:
+            return "protocol violation";
+        case ErrorCode::UnsupportedVersion:
+            return "unsupported protocol version";
+        case ErrorCode::AuthenticationFailed:
+            return "authentication failed";
+        case ErrorCode::NicknameTaken:
+            return "nickname already in use";
+        case ErrorCode::InvalidName:
+            return "invalid name";
+        case ErrorCode::InvalidMessage:
+            return "invalid message";
+        case ErrorCode::NotInRoom:
+            return "not in room";
+        case ErrorCode::UnknownUser:
+            return "unknown user";
+        case ErrorCode::RateLimited:
+            return "rate limited";
+        case ErrorCode::Overloaded:
+            return "server overloaded";
+        case ErrorCode::ServerFull:
+            return "server full";
+        case ErrorCode::ServerShutdown:
+            return "server shutting down";
+        case ErrorCode::StorageFailure:
+            return "storage failure";
+        case ErrorCode::TimedOut:
+            return "timed out";
     }
     return "unknown error";
 }
