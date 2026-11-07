@@ -13,10 +13,12 @@ include(GoogleTest)
 
 add_executable(orbit_unit_tests
     unit/byte_buffer_test.cpp
+    unit/connection_test.cpp
     unit/crc32c_test.cpp
+    unit/event_loop_test.cpp
     unit/metrics_test.cpp
     unit/protocol_test.cpp
     unit/timer_wheel_test.cpp
     unit/token_bucket_test.cpp)
-target_link_libraries(orbit_unit_tests PRIVATE orbit_protocol GTest::gtest_main)
+target_link_libraries(orbit_unit_tests PRIVATE orbit_net orbit_protocol GTest::gtest_main)
 gtest_discover_tests(orbit_unit_tests DISCOVERY_MODE PRE_TEST)
