@@ -1,0 +1,6 @@
+.git
+build
+data
+docs
+tests
+fuzz
