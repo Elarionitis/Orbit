@@ -584,6 +584,11 @@ int main(int argc, char* argv[]) {
                     static_cast<unsigned long long>(lost), static_cast<unsigned long long>(gaps),
                     static_cast<unsigned long long>(errors),
                     static_cast<unsigned long long>(disconnects));
+        if (disconnects > 0) {
+            std::printf(
+                "note        the server disconnected clients that fell behind, so 'lost' "
+                "includes what they never received\n");
+        }
     }
     return lost == 0 && gaps == 0 ? 0 : 1;
 }
