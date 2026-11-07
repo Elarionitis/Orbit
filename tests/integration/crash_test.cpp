@@ -13,6 +13,7 @@
 #include <thread>
 #include <vector>
 
+#include "storage/wal.h"
 #include "support/temp_dir.h"
 #include "support/test_client.h"
 
@@ -154,21 +155,24 @@ TEST(CrashRecovery, EveryAcknowledgedMessageSurvivesSigkill) {
         recovered[message->seq] = message->body;
     }
 
-    // The default retained history is 1000 messages, so audit what it still covers.
-    const std::uint64_t oldest_retained = recovered.begin()->first;
-    std::size_t audited = 0;
+    // Live history is capped, so audit the complete record from the log itself:
+    // every message the server ever acknowledged must be there, unaltered.
+    server.terminate_gracefully();
+    std::map<std::uint64_t, std::string> on_disk;
+    const auto report =
+        orbit::storage::Wal::recover(dir.path(), [&](const orbit::storage::WalRecord& record) {
+            EXPECT_EQ(record.room, "ledger");
+            on_disk[record.seq] = record.body;
+        });
+    EXPECT_EQ(report.corrupt_segments, 0U);
+
     for (const auto& [seq, body] : acknowledged) {
-        if (seq < oldest_retained) {
-            continue;
-        }
-        const auto found = recovered.find(seq);
-        ASSERT_NE(found, recovered.end()) << "acknowledged seq " << seq << " was lost";
-        EXPECT_EQ(found->second, body) << "acknowledged seq " << seq << " was altered";
-        ++audited;
+        const auto found = on_disk.find(seq);
+        ASSERT_NE(found, on_disk.end()) << "acknowledged seq " << seq << " was lost";
+        ASSERT_EQ(found->second, body) << "acknowledged seq " << seq << " was altered";
     }
-    EXPECT_GT(audited, 0U);
-    std::cout << "audited " << audited << " of " << acknowledged.size()
-              << " acknowledged messages across 5 crashes\n";
+    std::cout << "verified all " << acknowledged.size()
+              << " acknowledged messages after 5 SIGKILLs\n";
 }
 
 TEST(GracefulShutdown, SigtermExitsCleanly) {
