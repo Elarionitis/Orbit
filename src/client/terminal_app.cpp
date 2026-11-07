@@ -53,108 +53,110 @@ void write_stdout(std::string_view text) {
 
 // Length of a UTF-8 sequence from its lead byte.
 std::size_t utf8_length(unsigned char lead) {
-    if (lead >= 0xF0) return 4;
-    if (lead >= 0xE0) return 3;
-    if (lead >= 0xC0) return 2;
+    if (lead >= 0xF0)
+        return 4;
+    if (lead >= 0xE0)
+        return 3;
+    if (lead >= 0xC0)
+        return 2;
     return 1;
 }
 
 }  // namespace
 
-TerminalApp::TerminalApp(net::EventLoop& loop, ChatClient::Options options,
+TerminalApp::TerminalApp(net::EventLoop& loop, const ChatClient::Options& options,
                          std::string initial_room)
     : m_loop(loop),
-      m_client(loop, options,
-               ChatClient::Events{
-                   .on_state =
-                       [this](ChatClient::State state, const std::string& detail) {
-                           switch (state) {
-                               case ChatClient::State::Online:
-                                   notice("connected");
-                                   break;
-                               case ChatClient::State::Backoff:
-                                   notice(detail);
-                                   break;
-                               case ChatClient::State::Stopped:
-                                   if (!detail.empty()) {
-                                       notice(detail);
-                                       m_failed = true;
-                                       quit();
-                                   }
-                                   break;
-                               default:
-                                   break;
-                           }
-                           redraw_prompt();
-                       },
-                   .on_joined =
-                       [this](const Joined& joined, std::uint64_t missed) {
-                           if (m_current_room.empty()) {
-                               m_current_room = joined.room;
-                           }
-                           notice(std::format("joined #{} ({} online)", joined.room,
-                                              joined.member_count));
-                           if (missed > 0) {
-                               notice(std::format("{} older messages in #{} are no longer available",
-                                                  missed, joined.room));
-                           }
-                           flush_queued_lines();
-                       },
-                   .on_left =
-                       [this](const Left& left) {
-                           notice(std::format("left #{}", left.room));
-                           if (m_current_room == left.room) {
-                               m_current_room.clear();
-                           }
-                           redraw_prompt();
-                       },
-                   .on_message =
-                       [this](const Message& message, bool history) {
-                           const std::string room =
-                               message.room == m_current_room ? "" : "#" + message.room + " ";
-                           print(std::format("{}{} {}{}{}{}: {}", kDim, clock_time(message.timestamp_ms),
-                                             room, kReset, history ? kDim : "",
-                                             coloured(message.nick),
-                                             sanitize_for_terminal(message.body)));
-                       },
-                   .on_presence =
-                       [this](const Presence& presence) {
-                           if (presence.nick != m_nick) {
-                               notice(std::format("{} {} #{}", presence.nick,
-                                                  presence.joined ? "joined" : "left",
-                                                  presence.room));
-                           }
-                       },
-                   .on_direct =
-                       [this](const DirectMessage& message) {
-                           print(std::format("{}{}{} {}[dm]{} {}: {}", kDim,
-                                             clock_time(message.timestamp_ms), kReset, kBold, kReset,
-                                             coloured(message.from),
-                                             sanitize_for_terminal(message.body)));
-                       },
-                   .on_who =
-                       [this](const WhoReply& reply) {
-                           std::string names;
-                           for (const auto& nick : reply.nicks) {
-                               names += nick + " ";
-                           }
-                           notice(std::format("in #{}: {}", reply.room, names));
-                       },
-                   .on_rooms =
-                       [this](const RoomList& list) {
-                           if (list.rooms.empty()) {
-                               notice("no rooms yet");
-                           }
-                           for (const auto& room : list.rooms) {
-                               notice(std::format("#{} ({} online)", room.name, room.member_count));
-                           }
-                       },
-                   .on_error =
-                       [this](const Error& error) {
-                           notice(std::format("error: {} {}", error_name(error.code),
-                                              sanitize_for_terminal(error.detail)));
-                       },
-               }),
+      m_client(
+          loop, options,
+          ChatClient::Events{
+              .on_state =
+                  [this](ChatClient::State state, const std::string& detail) {
+                      switch (state) {
+                          case ChatClient::State::Online:
+                              notice("connected");
+                              break;
+                          case ChatClient::State::Backoff:
+                              notice(detail);
+                              break;
+                          case ChatClient::State::Stopped:
+                              if (!detail.empty()) {
+                                  notice(detail);
+                                  m_failed = true;
+                                  quit();
+                              }
+                              break;
+                          default:
+                              break;
+                      }
+                      redraw_prompt();
+                  },
+              .on_joined =
+                  [this](const Joined& joined, std::uint64_t missed) {
+                      if (m_current_room.empty()) {
+                          m_current_room = joined.room;
+                      }
+                      notice(
+                          std::format("joined #{} ({} online)", joined.room, joined.member_count));
+                      if (missed > 0) {
+                          notice(std::format("{} older messages in #{} are no longer available",
+                                             missed, joined.room));
+                      }
+                      flush_queued_lines();
+                  },
+              .on_left =
+                  [this](const Left& left) {
+                      notice(std::format("left #{}", left.room));
+                      if (m_current_room == left.room) {
+                          m_current_room.clear();
+                      }
+                      redraw_prompt();
+                  },
+              .on_message =
+                  [this](const Message& message, bool history) {
+                      const std::string room =
+                          message.room == m_current_room ? "" : "#" + message.room + " ";
+                      print(std::format("{}{} {}{}{}{}: {}", kDim, clock_time(message.timestamp_ms),
+                                        room, kReset, history ? kDim : "", coloured(message.nick),
+                                        sanitize_for_terminal(message.body)));
+                  },
+              .on_presence =
+                  [this](const Presence& presence) {
+                      if (presence.nick != m_nick) {
+                          notice(std::format("{} {} #{}", presence.nick,
+                                             presence.joined ? "joined" : "left", presence.room));
+                      }
+                  },
+              .on_direct =
+                  [this](const DirectMessage& message) {
+                      print(std::format("{}{}{} {}[dm]{} {}: {}", kDim,
+                                        clock_time(message.timestamp_ms), kReset, kBold, kReset,
+                                        coloured(message.from),
+                                        sanitize_for_terminal(message.body)));
+                  },
+              .on_who =
+                  [this](const WhoReply& reply) {
+                      std::string names;
+                      for (const auto& nick : reply.nicks) {
+                          names += nick + " ";
+                      }
+                      notice(std::format("in #{}: {}", reply.room, names));
+                  },
+              .on_rooms =
+                  [this](const RoomList& list) {
+                      if (list.rooms.empty()) {
+                          notice("no rooms yet");
+                      }
+                      for (const auto& room : list.rooms) {
+                          notice(std::format("#{} ({} online)", room.name, room.member_count));
+                      }
+                  },
+              .on_error =
+                  [this](const Error& error) {
+                      notice(std::format("error: {} {}", error_name(error.code),
+                                         sanitize_for_terminal(error.detail)));
+                  },
+          }),
       m_nick(options.nick),
       m_initial_room(std::move(initial_room)),
       m_interactive(::isatty(STDIN_FILENO) != 0 && ::isatty(STDOUT_FILENO) != 0) {}
@@ -446,15 +448,13 @@ void TerminalApp::redraw_prompt() {
         return;
     }
     const std::string shown_prompt = prompt();
-    const std::string plain_prompt = (m_current_room.empty() ? "no room" : "#" + m_current_room) +
-                                     (m_client.state() == ChatClient::State::Online ? ""
-                                                                                    : " (offline)") +
-                                     "> ";
+    const std::string plain_prompt =
+        (m_current_room.empty() ? "no room" : "#" + m_current_room) +
+        (m_client.state() == ChatClient::State::Online ? "" : " (offline)") + "> ";
     const std::size_t prompt_width = display_width(plain_prompt);
     const std::size_t width = terminal_width();
     const std::string_view text = m_editor.text();
-    const std::size_t cursor_column =
-        display_width(text.substr(0, m_editor.cursor()));
+    const std::size_t cursor_column = display_width(text.substr(0, m_editor.cursor()));
 
     // Keep the cursor in view by scrolling long lines horizontally.
     const std::size_t room = width > prompt_width + 1 ? width - prompt_width - 1 : 1;
@@ -471,7 +471,8 @@ void TerminalApp::redraw_prompt() {
     }
     end = std::min(end, text.size());
 
-    write_stdout(std::format("\r\x1b[2K{}{}\r\x1b[{}C", shown_prompt, text.substr(start, end - start),
+    write_stdout(std::format("\r\x1b[2K{}{}\r\x1b[{}C", shown_prompt,
+                             text.substr(start, end - start),
                              prompt_width + cursor_column - skip_columns));
 }
 

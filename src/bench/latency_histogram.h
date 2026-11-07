@@ -2,6 +2,7 @@
 
 #include <array>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 
@@ -36,8 +37,8 @@ public:
         if (m_count == 0) {
             return 0;
         }
-        const auto target =
-            static_cast<std::uint64_t>(static_cast<double>(m_count) * percent / 100.0 + 0.5);
+        const auto target = static_cast<std::uint64_t>(
+            std::llround(static_cast<double>(m_count) * percent / 100.0));
         std::uint64_t seen = 0;
         for (std::size_t i = 0; i < kBuckets; ++i) {
             seen += m_buckets[i];

@@ -18,7 +18,7 @@ namespace orbit::client {
 // terminal it reads plain lines instead, which makes it scriptable.
 class TerminalApp final : public net::IoHandler {
 public:
-    TerminalApp(net::EventLoop& loop, ChatClient::Options options, std::string initial_room);
+    TerminalApp(net::EventLoop& loop, const ChatClient::Options& options, std::string initial_room);
     ~TerminalApp() override;
 
     TerminalApp(const TerminalApp&) = delete;

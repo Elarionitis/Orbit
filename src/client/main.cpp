@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     }
 
     net::EventLoop loop;
-    client::TerminalApp app(loop, std::move(options), room);
+    client::TerminalApp app(loop, options, room);
     loop.post([&app] { app.start(); });
     loop.run();
     return app.failed() ? 1 : 0;
