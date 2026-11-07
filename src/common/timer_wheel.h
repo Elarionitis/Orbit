@@ -27,7 +27,9 @@ public:
     void advance(std::uint64_t now_ms);
 
     // Milliseconds until the next timer is due, or nullopt if none are pending.
-    std::optional<std::uint64_t> next_deadline_in(std::uint64_t now_ms) const;
+    // The event loop asks on every iteration, so the answer is cached: otherwise
+    // each pass would rescan the slots between now and the nearest timer.
+    std::optional<std::uint64_t> next_deadline_in(std::uint64_t now_ms);
 
     std::size_t pending() const { return m_index.size(); }
 
@@ -48,6 +50,7 @@ private:
     std::vector<Slot> m_slots;
     std::unordered_map<TimerId, Location> m_index;
     TimerId m_next_id = 1;
+    std::uint64_t m_next_due_tick = 0;  // Earliest possible due tick; zero means unknown.
 };
 
 }  // namespace orbit

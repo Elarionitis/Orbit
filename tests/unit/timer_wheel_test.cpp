@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <vector>
 
 using orbit::TimerWheel;
@@ -99,6 +100,43 @@ TEST(TimerWheel, ReportsNextDeadline) {
     wheel.schedule(100, [] {});
     EXPECT_EQ(wheel.next_deadline_in(0), 100U);
     EXPECT_EQ(wheel.next_deadline_in(60), 40U);
+}
+
+TEST(TimerWheel, CachedDeadlineTracksEarlierTimers) {
+    TimerWheel wheel(10, 64, 0);
+    wheel.schedule(300, [] {});
+    EXPECT_EQ(wheel.next_deadline_in(0), 300U);
+    wheel.schedule(100, [] {});
+    EXPECT_EQ(wheel.next_deadline_in(0), 100U);
+}
+
+TEST(TimerWheel, CachedDeadlineMovesOnAfterFiring) {
+    TimerWheel wheel(10, 64, 0);
+    wheel.schedule(100, [] {});
+    wheel.schedule(300, [] {});
+    EXPECT_EQ(wheel.next_deadline_in(0), 100U);
+    wheel.advance(100);
+    EXPECT_EQ(wheel.next_deadline_in(100), 200U);
+    wheel.advance(300);
+    EXPECT_FALSE(wheel.next_deadline_in(300).has_value());
+}
+
+TEST(TimerWheel, DeadlineReachesTimersPastOneRevolution) {
+    TimerWheel wheel(10, 8, 0);  // One revolution is 80 ms.
+    int fired = 0;
+    wheel.schedule(250, [&] { ++fired; });
+
+    // Drive the wheel only as the loop would: sleep for the reported wait, then
+    // advance. The timer must fire on time despite the cached conservative answer.
+    std::uint64_t now = 0;
+    while (fired == 0 && now < 1000) {
+        const auto wait = wheel.next_deadline_in(now);
+        ASSERT_TRUE(wait.has_value());
+        now += std::max<std::uint64_t>(*wait, 1);
+        wheel.advance(now);
+    }
+    EXPECT_EQ(fired, 1);
+    EXPECT_LE(now, 260U);
 }
 
 TEST(TimerWheel, NextDeadlineIsConservativeForDistantTimers) {

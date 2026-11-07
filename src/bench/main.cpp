@@ -98,6 +98,7 @@ struct BenchClient {
     std::string room;
     std::size_t room_index = 0;
     bool publisher = false;
+    bool connected = false;
     bool joined = false;
     bool open = true;
     bool write_armed = false;
@@ -150,8 +151,8 @@ public:
 private:
     void run() {
         for (auto& client : m_clients) {
-            m_poller.add(client->fd.get(), net::kInterestRead, client.get());
-            queue(*client, Hello{kProtocolVersion, client->nick, ""});
+            client->write_armed = true;
+            m_poller.add(client->fd.get(), net::kInterestRead | net::kInterestWrite, client.get());
         }
 
         std::array<net::PollEvent, 256> events;
@@ -163,6 +164,14 @@ private:
             for (int i = 0; i < count; ++i) {
                 const net::PollEvent& event = events[static_cast<std::size_t>(i)];
                 auto* client = static_cast<BenchClient*>(event.user);
+                if (client->open && !client->connected) {
+                    // The socket stays silent until the connect finishes; writing
+                    // to it before then fails with ENOTCONN on some platforms.
+                    if (event.writable || event.failed) {
+                        on_connect_finished(*client);
+                    }
+                    continue;
+                }
                 if (client->open && (event.readable || event.failed)) {
                     on_readable(*client);
                 }
@@ -174,6 +183,15 @@ private:
                 publish_due();
             }
         }
+    }
+
+    void on_connect_finished(BenchClient& client) {
+        if (net::connect_result(client.fd.get()) != 0) {
+            drop(client);
+            return;
+        }
+        client.connected = true;
+        queue(client, Hello{kProtocolVersion, client.nick, ""});
     }
 
     void queue(BenchClient& client, const AnyMessage& message) {
@@ -254,8 +272,11 @@ private:
             client.joined = true;
             client.last_seq = joined->head_seq;
             m_shared.joined.fetch_add(1, std::memory_order_acq_rel);
-        } else if (std::holds_alternative<Error>(message)) {
-            ++m_errors;
+        } else if (const auto* error = std::get_if<Error>(&message)) {
+            if (m_errors++ == 0) {
+                std::fprintf(stderr, "orbit_bench: first server error: %s (%s)\n",
+                             std::string(error_name(error->code)).c_str(), error->detail.c_str());
+            }
         }
     }
 

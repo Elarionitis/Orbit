@@ -18,6 +18,9 @@ TimerWheel::TimerId TimerWheel::schedule(std::uint64_t delay_ms, Callback callba
     const TimerId id = m_next_id++;
     m_slots[slot].push_front(Entry{id, rounds, std::move(callback)});
     m_index.emplace(id, Location{slot, m_slots[slot].begin()});
+    if (m_next_due_tick != 0) {
+        m_next_due_tick = std::min(m_next_due_tick, target);
+    }
     return id;
 }
 
@@ -33,6 +36,9 @@ bool TimerWheel::cancel(TimerId id) {
 
 void TimerWheel::advance(std::uint64_t now_ms) {
     const std::uint64_t target_tick = now_ms / m_tick_ms;
+    if (m_next_due_tick != 0 && m_next_due_tick <= target_tick) {
+        m_next_due_tick = 0;
+    }
     while (m_current_tick < target_tick) {
         ++m_current_tick;
         Slot& slot = m_slots[m_current_tick % m_slots.size()];
@@ -55,21 +61,27 @@ void TimerWheel::advance(std::uint64_t now_ms) {
     }
 }
 
-std::optional<std::uint64_t> TimerWheel::next_deadline_in(std::uint64_t now_ms) const {
+std::optional<std::uint64_t> TimerWheel::next_deadline_in(std::uint64_t now_ms) {
     if (m_index.empty()) {
+        m_next_due_tick = 0;
         return std::nullopt;
     }
-    for (std::size_t offset = 1; offset <= m_slots.size(); ++offset) {
-        const Slot& slot = m_slots[(m_current_tick + offset) % m_slots.size()];
-        const bool due_this_revolution = std::any_of(
-            slot.begin(), slot.end(), [](const Entry& entry) { return entry.rounds == 0; });
-        if (due_this_revolution) {
-            const std::uint64_t deadline = (m_current_tick + offset) * m_tick_ms;
-            return deadline > now_ms ? deadline - now_ms : 0;
+    if (m_next_due_tick == 0) {
+        // A cancelled timer can leave the cache early, which only costs one spare
+        // wake-up. With nothing due this revolution, look again one revolution on.
+        m_next_due_tick = m_current_tick + m_slots.size();
+        for (std::size_t offset = 1; offset <= m_slots.size(); ++offset) {
+            const Slot& slot = m_slots[(m_current_tick + offset) % m_slots.size()];
+            const bool due_this_revolution = std::any_of(
+                slot.begin(), slot.end(), [](const Entry& entry) { return entry.rounds == 0; });
+            if (due_this_revolution) {
+                m_next_due_tick = m_current_tick + offset;
+                break;
+            }
         }
     }
-    // Everything pending is at least one revolution away.
-    return m_slots.size() * m_tick_ms;
+    const std::uint64_t deadline = m_next_due_tick * m_tick_ms;
+    return deadline > now_ms ? deadline - now_ms : 0;
 }
 
 }  // namespace orbit

@@ -74,13 +74,16 @@ void EventLoop::stop() {
 }
 
 void EventLoop::post(Task task) {
+    // Counted before the task becomes visible. Counting afterwards would let the
+    // loop run it and subtract first, wrapping the unsigned depth to a huge value
+    // that load shedding would read as a full queue.
+    m_queue_depth.fetch_add(1, std::memory_order_relaxed);
     bool need_wake = false;
     {
         const std::lock_guard lock(m_mutex);
         m_incoming.push_back(std::move(task));
         need_wake = !std::exchange(m_wake_pending, true);
     }
-    m_queue_depth.fetch_add(1, std::memory_order_relaxed);
     // Only the first post of a batch pays for a syscall: the loop will pick up
     // anything that lands before it drains the queue.
     if (need_wake) {

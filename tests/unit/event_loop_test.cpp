@@ -86,6 +86,43 @@ TEST(EventLoop, PreservesPerProducerOrder) {
     EXPECT_EQ(total.load(), kProducers * kPerProducer);
 }
 
+// Regression: the depth once wrapped below zero when the loop drained a task before
+// the producer had counted it, and load shedding took that for a full queue.
+TEST(EventLoop, QueueDepthNeverWrapsUnderConcurrency) {
+    constexpr std::size_t kTasks = 500'000;
+
+    LoopThread thread;
+    std::atomic<bool> done{false};
+    std::atomic<std::size_t> worst{0};
+    std::thread observer([&] {
+        while (!done) {
+            const std::size_t depth = thread.loop.queue_depth();
+            std::size_t previous = worst.load();
+            while (depth > previous && !worst.compare_exchange_weak(previous, depth)) {
+            }
+        }
+    });
+
+    std::vector<std::thread> producers;
+    for (int producer = 0; producer < 2; ++producer) {
+        producers.emplace_back([&] {
+            for (std::size_t i = 0; i < kTasks; ++i) {
+                thread.loop.post([] {});
+            }
+        });
+    }
+    for (auto& producer : producers) {
+        producer.join();
+    }
+    std::promise<void> drained;
+    thread.loop.post([&] { drained.set_value(); });
+    drained.get_future().wait();
+    done = true;
+    observer.join();
+
+    EXPECT_LE(worst.load(), 2 * kTasks + 1);
+}
+
 TEST(EventLoop, TimerFiresAfterDelay) {
     LoopThread thread;
     std::promise<std::uint64_t> fired;
