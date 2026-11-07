@@ -18,6 +18,7 @@ add_executable(orbit_unit_tests
     unit/connection_test.cpp
     unit/crc32c_test.cpp
     unit/event_loop_test.cpp
+    unit/latency_histogram_test.cpp
     unit/metrics_test.cpp
     unit/protocol_test.cpp
     unit/timer_wheel_test.cpp

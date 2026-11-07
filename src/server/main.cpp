@@ -1,10 +1,11 @@
 #include <pthread.h>
 #include <signal.h>
+#include <sys/resource.h>
 
 #include <cstdio>
 #include <exception>
 #include <format>
-#include <iostream>
+#include <thread>
 
 #include "common/log.h"
 #include "server/chat_server.h"
@@ -23,6 +24,19 @@ sigset_t block_shutdown_signals() {
     return signals;
 }
 
+// A server that holds one descriptor per client needs more than the default soft
+// limit, which is often only 256 or 1024.
+void raise_fd_limit() {
+    rlimit limit{};
+    if (::getrlimit(RLIMIT_NOFILE, &limit) == 0) {
+        limit.rlim_cur = limit.rlim_max;
+        if (::setrlimit(RLIMIT_NOFILE, &limit) != 0) {
+            limit.rlim_cur = 10'240;  // The ceiling macOS enforces without tuning.
+            ::setrlimit(RLIMIT_NOFILE, &limit);
+        }
+    }
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -39,6 +53,7 @@ int main(int argc, char* argv[]) {
     // Belt and braces: socket writes already opt out, but OpenSSL or a future
     // code path must not be able to take the process down either.
     ::signal(SIGPIPE, SIG_IGN);
+    raise_fd_limit();
     const sigset_t signals = block_shutdown_signals();
 
     try {

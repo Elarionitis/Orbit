@@ -4,3 +4,7 @@ add_subdirectory(net)
 add_subdirectory(storage)
 add_subdirectory(server)
 add_subdirectory(client)
+
+if(ORBIT_BUILD_BENCH)
+    add_subdirectory(bench)
+endif()
