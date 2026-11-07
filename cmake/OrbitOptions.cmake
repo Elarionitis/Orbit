@@ -7,6 +7,11 @@ target_compile_options(orbit_options INTERFACE
     -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
     -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual)
 
+# GCC 13 reports a false positive inside std::vector::push_back after inlining.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(orbit_options INTERFACE -Wno-stringop-overflow)
+endif()
+
 if(ORBIT_WERROR)
     target_compile_options(orbit_options INTERFACE -Werror)
 endif()

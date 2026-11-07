@@ -39,7 +39,9 @@ public:
         } else {
             SSL_set_connect_state(m_ssl);
             if (!hostname.empty()) {
-                SSL_set_tlsext_host_name(m_ssl, hostname.c_str());
+                // What SSL_set_tlsext_host_name() expands to, minus its C-style cast.
+                SSL_ctrl(m_ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name,
+                         const_cast<char*>(hostname.c_str()));
                 SSL_set1_host(m_ssl, hostname.c_str());
             }
         }
@@ -167,9 +169,9 @@ std::shared_ptr<TlsContext> TlsContext::client(const std::string& ca_path, bool 
     SSL_CTX_set_min_proto_version(impl->context, TLS1_2_VERSION);
     if (verify) {
         SSL_CTX_set_verify(impl->context, SSL_VERIFY_PEER, nullptr);
-        const int loaded = ca_path.empty()
-                               ? SSL_CTX_set_default_verify_paths(impl->context)
-                               : SSL_CTX_load_verify_locations(impl->context, ca_path.c_str(), nullptr);
+        const int loaded = ca_path.empty() ? SSL_CTX_set_default_verify_paths(impl->context)
+                                           : SSL_CTX_load_verify_locations(
+                                                 impl->context, ca_path.c_str(), nullptr);
         if (loaded != 1) {
             throw std::runtime_error("cannot load CA certificates: " + openssl_error());
         }

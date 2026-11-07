@@ -130,9 +130,7 @@ public:
         m_body.assign(options.body_size, 'x');
     }
 
-    void add_client(std::unique_ptr<BenchClient> client) {
-        m_clients.push_back(std::move(client));
-    }
+    void add_client(std::unique_ptr<BenchClient> client) { m_clients.push_back(std::move(client)); }
 
     void start() {
         m_thread = std::thread([this] { run(); });
@@ -218,8 +216,11 @@ private:
         const bool want_write = !client.output.empty();
         if (want_write != client.write_armed) {
             client.write_armed = want_write;
-            m_poller.modify(client.fd.get(),
-                            net::kInterestRead | (want_write ? net::kInterestWrite : 0U), &client);
+            unsigned interest = net::kInterestRead;
+            if (want_write) {
+                interest |= net::kInterestWrite;
+            }
+            m_poller.modify(client.fd.get(), interest, &client);
         }
     }
 
@@ -340,7 +341,8 @@ private:
     std::thread m_thread;
     std::string m_body;
 
-    std::unique_ptr<bench::LatencyHistogram> m_latency = std::make_unique<bench::LatencyHistogram>();
+    std::unique_ptr<bench::LatencyHistogram> m_latency =
+        std::make_unique<bench::LatencyHistogram>();
     std::vector<std::uint64_t> m_published;
     std::vector<std::uint64_t> m_delivered;
     std::uint64_t m_measured_published = 0;
@@ -452,7 +454,8 @@ int main(int argc, char* argv[]) {
     std::mt19937_64 random(42);
     const std::uint64_t interval_ns =
         options.rate > 0 ? 1'000'000'000ULL * options.publishers / options.rate : 0;
-    std::uniform_int_distribution<std::uint64_t> stagger(0, std::max<std::uint64_t>(interval_ns, 1));
+    std::uniform_int_distribution<std::uint64_t> stagger(0,
+                                                         std::max<std::uint64_t>(interval_ns, 1));
     const std::uint64_t run_id = wall_clock_ms() % 1'000'000;
 
     std::vector<BenchClient*> clients;
@@ -572,11 +575,11 @@ int main(int argc, char* argv[]) {
                                      : "closed loop");
         std::printf("published   %12.0f msg/s\n", publish_rate);
         std::printf("delivered   %12.0f msg/s\n", delivery_rate);
-        std::printf("latency     p50 %.3f ms   p90 %.3f ms   p99 %.3f ms   p99.9 %.3f ms   max "
-                    "%.3f ms\n",
-                    to_ms(latency.percentile(50)), to_ms(latency.percentile(90)),
-                    to_ms(latency.percentile(99)), to_ms(latency.percentile(99.9)),
-                    to_ms(latency.max()));
+        std::printf(
+            "latency     p50 %.3f ms   p90 %.3f ms   p99 %.3f ms   p99.9 %.3f ms   max "
+            "%.3f ms\n",
+            to_ms(latency.percentile(50)), to_ms(latency.percentile(90)),
+            to_ms(latency.percentile(99)), to_ms(latency.percentile(99.9)), to_ms(latency.max()));
         std::printf("integrity   %llu lost, %llu sequence gaps, %llu errors, %llu disconnects\n",
                     static_cast<unsigned long long>(lost), static_cast<unsigned long long>(gaps),
                     static_cast<unsigned long long>(errors),
