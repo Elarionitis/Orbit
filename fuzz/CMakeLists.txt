@@ -7,3 +7,4 @@ function(orbit_add_fuzzer name)
 endfunction()
 
 orbit_add_fuzzer(fuzz_protocol orbit_protocol)
+orbit_add_fuzzer(fuzz_wal orbit_storage)
