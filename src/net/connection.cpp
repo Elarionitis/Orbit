@@ -282,8 +282,11 @@ void Connection::close(CloseReason reason) {
 
     const CloseReason reported = graceful ? m_close_reason : reason;
     m_loop.defer([this, reported] {
-        if (m_handlers.on_close) {
-            m_handlers.on_close(reported);
+        // Moved out first: the handler is allowed to destroy this object, and a
+        // std::function must not be destroyed while it is running.
+        const auto on_close = std::move(m_handlers.on_close);
+        if (on_close) {
+            on_close(reported);
         }
     });
 }

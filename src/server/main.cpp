@@ -1,66 +1,67 @@
-#include "server.h"
-#include "../common/utils.h"
+#include <pthread.h>
+#include <signal.h>
+
+#include <cstdio>
+#include <exception>
+#include <format>
 #include <iostream>
-#include <csignal>
-#include <thread>
-#include <chrono>
-#include <string>
+
+#include "common/log.h"
+#include "server/chat_server.h"
 
 namespace {
-    volatile std::sig_atomic_t g_signal_status = 0;
+
+// Blocks the shutdown signals in this thread, and so in every thread it spawns.
+// The main thread then collects them synchronously with sigwait(): no handler, no
+// async-signal-safety rules, and shutdown runs as ordinary code.
+sigset_t block_shutdown_signals() {
+    sigset_t signals;
+    sigemptyset(&signals);
+    sigaddset(&signals, SIGINT);
+    sigaddset(&signals, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &signals, nullptr);
+    return signals;
 }
 
-void signal_handler(int signal) {
-    g_signal_status = signal;
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
-    uint16_t port = orbit::kDefaultPort;
-    
-    // Parse configurable port
-    if (argc > 1) {
-        try {
-            int parsed_port = std::stoi(argv[1]);
-            if (parsed_port < 1 || parsed_port > 65535) {
-                std::cerr << "Error: Port must be in range 1-65535." << std::endl;
-                return 1;
-            }
-            port = static_cast<uint16_t>(parsed_port);
-        } catch (const std::exception& e) {
-            std::cerr << "Error: Invalid port argument specified: " << e.what() << std::endl;
-            return 1;
-        }
+    using namespace orbit;
+
+    auto parsed = server::parse_args(argc, argv);
+    if (!parsed.config) {
+        std::fputs(parsed.message.c_str(), parsed.exit_code == 0 ? stdout : stderr);
+        return parsed.exit_code;
     }
+    const server::ServerConfig& config = *parsed.config;
+    log::set_level(config.log_level);
 
-    // Register signal handlers for clean exit
-    std::signal(SIGINT, signal_handler);
-    std::signal(SIGTERM, signal_handler);
+    // Belt and braces: socket writes already opt out, but OpenSSL or a future
+    // code path must not be able to take the process down either.
+    ::signal(SIGPIPE, SIG_IGN);
+    const sigset_t signals = block_shutdown_signals();
 
-    Server server(port);
-    if (!server.start()) {
-        std::cerr << "Failed to bootstrap Orbit Server." << std::endl;
+    try {
+        server::ChatServer server(config);
+        server.start();
+
+        log::info("orbit {} listening on {}:{} (threads={}, tls={}, persistence={})",
+                  ORBIT_VERSION, config.host, server.port(),
+                  config.threads == 0 ? std::thread::hardware_concurrency() : config.threads,
+                  config.tls_cert.empty() ? "off" : "on",
+                  config.data_dir.empty() ? "off" : storage::to_string(config.sync_policy));
+        if (config.metrics_port) {
+            log::info("metrics on http://{}:{}/metrics", config.metrics_host,
+                      server.metrics_port());
+        }
+
+        int received = 0;
+        sigwait(&signals, &received);
+        log::info("received {}, shutting down", received == SIGINT ? "SIGINT" : "SIGTERM");
+        server.stop();
+    } catch (const std::exception& error) {
+        log::error("fatal: {}", error.what());
         return 1;
     }
-
-    std::cout << "Orbit Server is running. Press Ctrl+C to stop gracefully." << std::endl;
-    
-    // Create a thread for accepting clients since accept() is blocking
-    std::thread accept_thread([&server]() {
-        server.accept_clients();
-    });
-
-    // Loop until we receive interrupt or termination signal
-    while (g_signal_status == 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    std::cout << "\nInterrupted. Shutting down server gracefully..." << std::endl;
-    server.stop();
-
-    if (accept_thread.joinable()) {
-        accept_thread.join();
-    }
-    std::cout << "Server shutdown successfully." << std::endl;
-
     return 0;
 }

@@ -11,8 +11,11 @@ if(ORBIT_WERROR)
     target_compile_options(orbit_options INTERFACE -Werror)
 endif()
 
+# Sanitizers apply globally rather than through orbit_options: dependencies such
+# as GoogleTest must be instrumented too, because mixing instrumented and plain
+# builds of the same standard library containers gives false reports.
 if(ORBIT_SANITIZE)
-    target_compile_options(orbit_options INTERFACE
-        -fsanitize=${ORBIT_SANITIZE} -fno-omit-frame-pointer -fno-sanitize-recover=all)
-    target_link_options(orbit_options INTERFACE -fsanitize=${ORBIT_SANITIZE})
+    add_compile_options(-fsanitize=${ORBIT_SANITIZE} -fno-omit-frame-pointer
+        -fno-sanitize-recover=all)
+    add_link_options(-fsanitize=${ORBIT_SANITIZE})
 endif()
