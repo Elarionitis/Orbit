@@ -1,0 +1,16 @@
+---
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
+  concurrency-*,
+  -concurrency-mt-unsafe,
+  misc-unused-parameters,
+  modernize-use-override,
+  modernize-use-nullptr,
+  performance-*,
+  readability-container-size-empty,
+  readability-redundant-smartptr-get
+WarningsAsErrors: ''
+HeaderFilterRegex: 'src/.*'

@@ -1,11 +1,25 @@
-# Build directories
+# Build output
 build/
-bin/
-lib/
+build-*/
+cmake-build-*/
+compile_commands.json
+
+# Runtime data
+data/
+*.log
+*.wal
+*.profraw
+
+# Fuzzing artefacts
+crash-*
+leak-*
+timeout-*
+fuzz/corpus/
 
 # IDE files
 .vscode/
 .idea/
+.cache/
 *.swp
 *.swo
 
