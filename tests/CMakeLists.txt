@@ -19,6 +19,11 @@ add_executable(orbit_unit_tests
     unit/metrics_test.cpp
     unit/protocol_test.cpp
     unit/timer_wheel_test.cpp
-    unit/token_bucket_test.cpp)
-target_link_libraries(orbit_unit_tests PRIVATE orbit_net orbit_protocol GTest::gtest_main)
+    unit/token_bucket_test.cpp
+    unit/wal_test.cpp)
+target_include_directories(orbit_unit_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(orbit_unit_tests PRIVATE orbit_storage GTest::gtest_main)
+if(ORBIT_ENABLE_TLS)
+    target_sources(orbit_unit_tests PRIVATE unit/tls_test.cpp)
+endif()
 gtest_discover_tests(orbit_unit_tests DISCOVERY_MODE PRE_TEST)
