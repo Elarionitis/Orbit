@@ -73,8 +73,8 @@ int main(int argc, char* argv[]) {
     options.nick = default_nick();
     std::string room = "general";
     bool use_tls = false;
-    bool verify = true;
-    std::string ca_path;
+    [[maybe_unused]] bool verify = true;
+    [[maybe_unused]] std::string ca_path;
 
     try {
         for (int i = 1; i < argc; ++i) {
