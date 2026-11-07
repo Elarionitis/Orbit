@@ -247,6 +247,7 @@ void Shard::on_publish(PublishRequest&& request) {
     storage::WalRecord record{std::move(request.room), seq, now, std::move(request.nick),
                               std::move(request.body)};
     const SessionId sender = request.sender;
+    const std::uint64_t correlation = request.correlation;
     const std::uint64_t received_ns = request.received_ns;
 
     storage::Wal::Completion completion;
@@ -256,12 +257,12 @@ void Shard::on_publish(PublishRequest&& request) {
         // retract something a client has already read. The writer completes in
         // log order and the posts are FIFO, so room order is preserved. Rooms
         // are never destroyed, so the pointer stays valid.
-        completion = [this, room, seq, frame, ack, sender, received_ns](bool durable) {
-            m_loop.post([this, room, seq, frame, ack, sender, received_ns, durable] {
+        completion = [this, room, seq, frame, ack, sender, correlation, received_ns](bool durable) {
+            m_loop.post([this, room, seq, frame, ack, sender, correlation, received_ns, durable] {
                 if (durable) {
                     finish_publish(*room, seq, frame, sender, ack, received_ns);
                 } else {
-                    send_to(sender, make_frame(Error{0, ErrorCode::StorageFailure, {}}));
+                    send_to(sender, make_frame(Error{correlation, ErrorCode::StorageFailure, {}}));
                 }
             });
         };
@@ -271,7 +272,7 @@ void Shard::on_publish(PublishRequest&& request) {
         room->release_seq();
         m_context.metrics.overloaded.add();
         const auto code = wal->failed() ? ErrorCode::StorageFailure : ErrorCode::Overloaded;
-        send_to(sender, make_frame(Error{0, code, "message not stored"}));
+        send_to(sender, make_frame(Error{correlation, code, "message not stored"}));
         return;
     }
     if (!wait_for_disk) {
