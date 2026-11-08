@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <format>
 #include <map>
 #include <set>
@@ -572,7 +573,7 @@ TEST_F(ServerTest, EnforcesTheGlobalRoomLimit) {
 }
 
 // One stalled client must not slow anybody else down, and must not grow the server
-// without limit. It is cut off, and the healthy client never notices.
+// without limit. It is cut off, and the clients that keep up never notice.
 TEST_F(ServerTest, SlowConsumerIsDisconnectedWithoutHurtingOthers) {
     config.max_queued_bytes = 2 * 1024 * 1024;
     config.history_bytes = 1024 * 1024;
@@ -587,34 +588,58 @@ TEST_F(ServerTest, SlowConsumerIsDisconnectedWithoutHurtingOthers) {
 
     const std::string body(8 * 1024, 'x');
     constexpr int kMessages = 3000;  // About 24 MB, well past socket buffers and the queue.
+    // The publisher stays at most this far ahead of the clients that read, so they
+    // are healthy by construction however slowly this machine schedules them.
+    // 64 messages is 512 KB, a quarter of the queue limit.
+    constexpr int kWindow = 64;
+
+    std::atomic<int> healthy_seen{0};
+    std::atomic<int> writer_seen{0};
+    std::atomic<bool> stop{false};
 
     std::thread publisher([&] {
-        for (int i = 0; i < kMessages; ++i) {
+        for (int i = 0; i < kMessages && !stop; ++i) {
+            while (i - std::min(healthy_seen.load(), writer_seen.load()) >= kWindow && !stop) {
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
             writer.send(Publish{0, "general", body});
         }
     });
     std::thread drain_writer([&] {
         // The writer's own echoes must be read or it would become slow itself.
-        int seen = 0;
-        while (seen < kMessages) {
+        while (writer_seen < kMessages && !stop) {
             if (!writer.wait_for<Message>(10000).has_value()) {
                 break;
             }
-            ++seen;
+            ++writer_seen;
         }
     });
 
     std::uint64_t expected = 1;
+    std::string failure;
     while (expected <= kMessages) {
         const auto message = healthy.wait_for<Message>(10000);
-        ASSERT_TRUE(message.has_value()) << "healthy client stalled at seq " << expected;
-        ASSERT_EQ(message->seq, expected++);
+        if (!message.has_value()) {
+            failure = "healthy client stalled at seq " + std::to_string(expected);
+            break;
+        }
+        if (message->seq != expected) {
+            failure = "expected seq " + std::to_string(expected) + ", got " +
+                      std::to_string(message->seq);
+            break;
+        }
+        ++expected;
+        ++healthy_seen;
     }
+    stop = true;
     publisher.join();
     drain_writer.join();
+    ASSERT_TRUE(failure.empty()) << failure;
 
+    // Exactly one disconnect: the stalled client, and neither of the others.
     const auto text = server->registry().render();
-    EXPECT_NE(text.find("orbit_disconnects_total{reason=\"slow_consumer\"} 1"), std::string::npos);
+    EXPECT_NE(text.find("orbit_disconnects_total{reason=\"slow_consumer\"} 1\n"),
+              std::string::npos);
 }
 
 TEST_F(ServerTest, GhostMembersAreCleanedUpWhenAClientVanishesMidJoin) {
