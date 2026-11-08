@@ -1,5 +1,6 @@
 #include <sys/epoll.h>
 
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <system_error>

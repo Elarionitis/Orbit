@@ -1,4 +1,5 @@
 // Feeds arbitrary bytes through the stream decoder exactly as a socket would.
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>

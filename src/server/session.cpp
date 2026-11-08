@@ -1,5 +1,6 @@
 #include "server/session.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <utility>
